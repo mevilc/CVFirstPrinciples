@@ -17,7 +17,9 @@ struct Point
 	Point( T _x, T _y) : x(_x), y(_y) {}
 };
 
-cv::Mat rotate(cv::Mat oImg, double angle)
+enum class rotateMethod { FWD_MAP, INV_MAP };
+
+cv::Mat rotate(cv::Mat oImg, double angle, rotateMethod method)
 {
 	constexpr double PI = 3.1418;
 	int originalImgWidth = oImg.cols;
@@ -95,33 +97,74 @@ cv::Mat rotate(cv::Mat oImg, double angle)
 	// create black image
 	cv::Mat rotatedImg(newHeight, newWidth, CV_8UC3, cv::Scalar(0, 0, 0));	
 
-	for (int y = 0; y < originalImgHeight; y++)
+	if (method == rotateMethod::FWD_MAP)
 	{
-		for (int x = 0; x < originalImgWidth; x++)
+		for (int y = 0; y < originalImgHeight; y++)
 		{
-			// apply rotation to each original pixel position to get rotated pixel position
-			// round new fp position to closest int
+			for (int x = 0; x < originalImgWidth; x++)
+			{
+				// apply rotation to each original pixel position to get rotated pixel position
+				// round new fp position to closest int
 
-			int x_prime = static_cast<int>
-							(std::round(std::cos(angle / 180.0 * PI) * x - std::sin(angle / 180.0 * PI) * y));
-			int y_prime = static_cast<int>
-							(std::round(std::sin(angle / 180.0 * PI) * x + std::cos(angle / 180.0 * PI) * y));
+				int x_prime = static_cast<int>
+					(std::round(std::cos(angle / 180.0 * PI) * x - std::sin(angle / 180.0 * PI) * y));
+				int y_prime = static_cast<int>
+					(std::round(std::sin(angle / 180.0 * PI) * x + std::cos(angle / 180.0 * PI) * y));
 
-			// translate position to fit in viewport
-			y_prime += negY;
-			x_prime += negX;
+				// translate position to fit in rotated image viewport
+				y_prime += negY;
+				x_prime += negX;
 
-			// validity check
-			if (y_prime < minY || x_prime < minX || y_prime >= maxY || x_prime >= maxX)
-				continue;
+				// validity check
+				if (y_prime < minY || x_prime < minX || y_prime >= maxY || x_prime >= maxX)
+					continue;
 
-			// extract color at original image pixel position
-			cv::Vec3b originalClr = oImg.at<cv::Vec3b>(y, x);	// 8 bit
-			
-			// dump color to rotated image pixel position
-			rotatedImg.at<cv::Vec3b>(y_prime, x_prime) = originalClr;
+				// extract color at original image pixel position
+				cv::Vec3b originalClr = oImg.at<cv::Vec3b>(y, x);	// 8 bit
+
+				// dump color to rotated image pixel position
+				rotatedImg.at<cv::Vec3b>(y_prime, x_prime) = originalClr;
+			}
 		}
 	}
+
+	else if (method == rotateMethod::INV_MAP)
+	{
+		int posX{}, posY{}, ct{};
+		
+		for (int y_prime = 0; y_prime < rotatedImg.rows; y_prime++)
+		{
+			for (int x_prime = 0; x_prime < rotatedImg.cols; x_prime++)
+			{
+				// apply inverse rotation to each rotated pixel position to get original pixel position
+				// round new fp position to closest int
+
+				// translate coordinates to center
+				int x_adj = x_prime - rotatedImg.cols / 2;
+				int y_adj = y_prime - rotatedImg.rows / 2;
+
+				int x = static_cast<int>
+					(std::round(std::cos(angle / 180.0 * PI) * x_adj + std::sin(angle / 180.0 * PI) * y_adj));
+				int y = static_cast<int>
+					(std::round(-1 * std::sin(angle / 180.0 * PI) * x_adj + std::cos(angle / 180.0 * PI) * y_adj));
+
+				// translate back to original coords
+				y += originalImgHeight / 2;
+				x += originalImgWidth / 2;
+
+				// validity check
+				if (y < 0 || x < 0 || y >= originalImgHeight || x >= originalImgWidth)
+					continue;
+
+				// extract color at closest original image pixel position
+				cv::Vec3b originalClr = oImg.at<cv::Vec3b>(y, x);	// 8 bit
+
+				// dump color to rotated image pixel position
+				rotatedImg.at<cv::Vec3b>(y_prime, x_prime) = originalClr;
+			}
+		}
+	}
+
 	return rotatedImg;
 }
 
@@ -129,11 +172,12 @@ int main()
 {
 	std::string imgPath = "C:/CVFirstPrinciples/rgbImage.png";
 	cv::Mat bgrImg = cv::imread(imgPath);
-	cv::Mat rotatedImg = rotate(bgrImg, 135);
-
+	cv::Mat rotatedImgFwd = rotate(bgrImg, 15, rotateMethod::FWD_MAP);
+	cv::Mat rotatedImgInv = rotate(bgrImg, 15, rotateMethod::INV_MAP);
 	
 	cv::imshow("bgrOriginal", bgrImg);
-	cv::imshow("rotatedImg", rotatedImg);
+	cv::imshow("rotatedImgFwd", rotatedImgFwd);
+	cv::imshow("rotatedImgInv", rotatedImgInv);
 	cv::waitKey();
 	cv::destroyAllWindows();
 
