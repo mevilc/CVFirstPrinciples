@@ -1,1 +1,1 @@
-# CVFirstPrinciples
+# First principles of computer vision
