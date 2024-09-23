@@ -168,6 +168,7 @@ cv::Mat rotate(cv::Mat oImg, double angle, rotateMethod method)
 	return rotatedImg;
 }
 
+/*
 int main()
 {
 	std::string imgPath = "C:/CVFirstPrinciples/rgbImage.png";
@@ -184,3 +185,4 @@ int main()
 	return 0;
 
 }
+*/
