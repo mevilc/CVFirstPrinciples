@@ -249,16 +249,11 @@ void Scale::bilinear(const cv::Mat& oImg, cv::Mat& sImg, uint8_t scale)
 	{
 		for (int x = 0; x < sImg.cols; x++)
 		{
-			//if (y == 24 && x == 1838)
-				//std::cout << x << ", " << y << "\n";
 			// fp coords in original image
 			Point<float> orPt( static_cast<float>(x) / scale, 
 				               static_cast<float>(y) / scale );
 			if (orPt.x < 0.f || orPt.y < 0.f || orPt.x >= oImg.cols || orPt.y >= oImg.rows)
 				continue;
-
-			//if (y == 24 && x == 1838)
-				//std::cout << orPt.x << ", " << orPt.y << "\n";
 
 			// int neighbors
 			Point<int> uL{ static_cast<int>( std::floor(orPt.x) ), 
@@ -280,8 +275,6 @@ void Scale::bilinear(const cv::Mat& oImg, cv::Mat& sImg, uint8_t scale)
 			bool lLValid = neighValid(lL, oImg.cols, oImg.rows);
 			bool lRValid = neighValid(lR, oImg.cols, oImg.rows);
 
-			//if (y == 24 && x == 1838)
-			//	std::cout << "neighbor check done\n";
 			// top interpolation:	 ITop = (1 - dx) * Iul + dx * Iur
 			// bottom interpolation: IBot = (1- dx) * Ill + dx + Ilr
 			std::vector<float> topInterp(3), botInterp(3), finInterp(3);
@@ -317,9 +310,6 @@ void Scale::bilinear(const cv::Mat& oImg, cv::Mat& sImg, uint8_t scale)
 				botInterp = interpolate(dist, lL, lR, oImg);
 			}
 			
-			//if (y == 24 && x == 1838)
-			//	std::cout << "done interpolating\n";
-
 			// final interpolation:  IFin = (1 - dy) * ITop + dy * IBot
 			finInterp[0] = (1 - dist.y) * topInterp[0] + dist.y * botInterp[0]; // R
 			finInterp[1] = (1 - dist.y) * topInterp[1] + dist.y * botInterp[1]; // G
@@ -360,17 +350,17 @@ int main()
 
 	// rotation
 	//cv::Mat rotatedImgFwd = Rotation::rotate(img, 15, Rotation::rotateMethod::FWD_MAP);
-	//cv::Mat rotatedImgInv = Rotation::rotate(img, 15, Rotation::rotateMethod::INV_MAP);
+	cv::Mat rotatedImgInv = Rotation::rotate(img, 15, Rotation::rotateMethod::INV_MAP);
 	
-	//cv::Mat translatedImg = translate(img, -100, -100);
-	cv::Mat scaledImg = Scale::scale(img, Scale::InterpolationMethod::Bilinear, 2);
-	cv::Mat scaledImg1 = Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 2);
+	cv::Mat translatedImg = translate(rotatedImgInv, 100, 100);
+	//cv::Mat scaledImg = Scale::scale(img, Scale::InterpolationMethod::Bilinear, 2);
+	cv::Mat scaledImg1 = Scale::scale(translatedImg, Scale::InterpolationMethod::NearestNeighbour, 2);
 
 	cv::imshow("original", img);
 	//cv::imshow("rotatedImgFwd", rotatedImgFwd);
 	//cv::imshow("rotatedImgInv", rotatedImgInv);
 	//cv::imshow("translatedImg", translatedImg);
-	cv::imshow("scaledImg", scaledImg);
+	//cv::imshow("scaledImg", scaledImg);
 	cv::imshow("scaledImg1", scaledImg1);
 
 	cv::waitKey();
