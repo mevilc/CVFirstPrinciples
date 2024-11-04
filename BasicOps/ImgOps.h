@@ -13,12 +13,20 @@ namespace imgproc
 		Point(T _x, T _y) : x(_x), y(_y) {}
 	};
 
+	template <typename T>
+	struct Mat
+	{
+		std::vector< std::vector<T> > data;
+		Mat(uint8_t N) : data(N, std::vector<T>(N)) {}
+	};
+
+	static constexpr double PI = 3.14159;
+
 	class Rotation
 	{	
 	
 	public:
-		enum class rotateMethod { FWD_MAP, INV_MAP };
-		static constexpr double PI = 3.14159;
+		enum class rotateMethod { FWD_MAP, INV_MAP };	
 		static const cv::Mat rotate(cv::Mat& img, double angle, rotateMethod method);
 	
 	private:
@@ -36,11 +44,6 @@ namespace imgproc
 			Bilinear,
 		};
 
-		struct Neighbors
-		{
-			Point<float> uL, uR, lL, lR;
-		};
-
 		static const cv::Mat scale(cv::Mat img, InterpolationMethod intMethod, uint8_t scale);
 	private:
 		static void nearestNeighbour(const cv::Mat& oImg, cv::Mat& sImg, uint8_t scale);
@@ -49,6 +52,16 @@ namespace imgproc
 		static const std::vector<float>
 			interpolate(const Point<float> dist, const Point<int>& validNeigh,
 				const Point<int>& rightNeigh, const cv::Mat& oImg);
+	};     
+	
+	class GuassianFilter
+	{
+	public:
+		static const cv::Mat applyGuassian(cv::Mat& img, uint8_t kernelSize,
+			float stdDev);
+
+	private:
+		static const Mat<float> computeKernel(uint8_t kernelSize, float stdDev);
 	};
 }
 

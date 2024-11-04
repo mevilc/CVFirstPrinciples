@@ -343,6 +343,63 @@ const cv::Mat Scale::scale(cv::Mat img, InterpolationMethod intMethod, uint8_t s
 	return scaledImg;
 }
 
+const cv::Mat GuassianFilter::applyGuassian(cv::Mat& img, uint8_t kernelSize,
+	float stdDev)
+{
+	auto kernel = computeKernel(kernelSize, stdDev);
+
+	// convolve kernel across image
+	
+}
+
+const Mat<float> 
+GuassianFilter::computeKernel(uint8_t kernelSize, float stdDev)
+{
+	// center pixel position for a nxn kernel
+	Point<int> pxlCenter{ (kernelSize - 1) / 2, (kernelSize - 1) / 2 };
+
+	// find pixel offsets for other pixels from the center pixel
+	// i, j = kernel position
+	// x, y = pixel offset position
+	// x = i - centerX, y = j - centerY
+	// use offsets and stdDev to get kernel weights
+	Mat<float> kernel(kernelSize);
+
+	Point<int> offset{};
+	float prefix{}, expTop{}, expBot{};
+	for (int j = 0; j < kernelSize; j++)
+	{
+		for (int i = 0; i < kernelSize; i++)
+		{	
+			offset.x = i - pxlCenter.x;
+			offset.y = j - pxlCenter.y;
+			// kernel weight
+			prefix = 1 / ( 2 * PI * std::pow(stdDev, 2) );
+			expTop = std::pow(offset.x, 2) + std::pow(offset.y, 2);
+			expBot = 2 * std::pow(stdDev, 2) * -1;
+			kernel.data[j][i] = prefix * std::expf(expTop / expBot);
+		}
+	}
+
+	// compute sum of kernel weights
+	float kernelWeightSum{};
+	for (const auto& row : kernel.data)
+	{
+		for (const float weight : row)
+			kernelWeightSum += weight;
+	}
+
+	// normalize kernel
+	for (int j = 0; j < kernelSize; j++)
+	{
+		for (int i = 0; i < kernelSize; i++)
+			kernel.data[j][i] /= kernelWeightSum;
+	}
+
+	return kernel;
+
+}
+
 int main()
 {
 	std::string imgPath = "C:/CVFirstPrinciples/rgbImage.png";
