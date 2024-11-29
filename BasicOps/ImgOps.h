@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <opencv2/imgcodecs.hpp>
+#include <optional>
 
 namespace imgproc
 {
@@ -11,13 +12,6 @@ namespace imgproc
 		T x, y;
 		Point() = default;
 		Point(T _x, T _y) : x(_x), y(_y) {}
-	};
-
-	template <typename T>
-	struct Mat
-	{
-		std::vector< std::vector<T> > data;
-		Mat(uint8_t N) : data(N, std::vector<T>(N)) {}
 	};
 
 	static constexpr double PI = 3.14159;
@@ -57,11 +51,29 @@ namespace imgproc
 	class GuassianFilter
 	{
 	public:
-		static const cv::Mat applyGuassian(cv::Mat& img, uint8_t kernelSize,
-			float stdDev);
+		static const std::optional<cv::Mat> applyGuassian(const cv::Mat& img, const uint8_t kernelSize,
+			const float stdDev);
 
 	private:
-		static const Mat<float> computeKernel(uint8_t kernelSize, float stdDev);
+		using Kernel = std::vector<float>;
+		static const std::optional<Kernel>
+			computeKernel(const uint8_t kernelSize, const float stdDev);
 	};
+
+	enum class Brightenss { DARKEN, BRIGHTEN };
+	static const cv::Mat adjustBrightness(const cv::Mat& img, uint8_t adjustBy,
+		Brightenss brightness);
+
+	static const cv::Mat invert(const cv::Mat& img);
+
+	enum class Contrast { LOW, HIGH };
+	static const cv::Mat contrast(const cv::Mat& img, float factor, 
+		Contrast contrast);
+
+	static const cv::Mat toGrayscale(const cv::Mat& img);
+	
+	static const std::vector<cv::Mat>
+		getGuassianPyramid(const cv::Mat& img);
+
 }
 

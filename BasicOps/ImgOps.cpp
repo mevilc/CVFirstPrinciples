@@ -6,8 +6,8 @@
 #include <cmath>
 #include <algorithm>
 
-#include <opencv2/highgui.hpp>
 
+#include <opencv2/highgui.hpp>
 #include "ImgOps.h"
 
 using namespace imgproc;
@@ -343,82 +343,311 @@ const cv::Mat Scale::scale(cv::Mat img, InterpolationMethod intMethod, uint8_t s
 	return scaledImg;
 }
 
-const cv::Mat GuassianFilter::applyGuassian(cv::Mat& img, uint8_t kernelSize,
-	float stdDev)
+const std::optional<cv::Mat>
+GuassianFilter::applyGuassian(const cv::Mat& img, const uint8_t kernelSize,
+	const float stdDev)
 {
 	auto kernel = computeKernel(kernelSize, stdDev);
-
-	// convolve kernel across image
+	if (!kernel.has_value())
+		return {};
 	
+	uint8_t pxlOffEntense = (kernelSize - 1) / 2;
+
+	// pad image with null pixels
+	cv::Mat padImg(img.rows + pxlOffEntense + 1, img.cols + pxlOffEntense + 1, 
+		CV_8UC3, cv::Scalar(0,0,0));
+	img.copyTo( padImg(cv::Rect(1, 1, img.cols, img.rows)) );
+	
+	int imgXPos{};
+	// convolve horizontal kernel across image
+	for (int y = 1; y < padImg.rows; y++)
+	{
+		for (int x = 1; x < padImg.cols; x++)
+		{
+			float sumR{}, sumG{}, sumB{};
+
+			for (int k = 0; k < kernelSize; k++)
+			{
+				imgXPos = x + (k - pxlOffEntense);
+				if (imgXPos < 0 || imgXPos >= padImg.cols)
+					continue;
+
+				sumR += kernel.value()[k] * padImg.at<cv::Vec3b>(y, imgXPos)[2];
+				sumG += kernel.value()[k] * padImg.at<cv::Vec3b>(y, imgXPos)[1];
+				sumB += kernel.value()[k] * padImg.at<cv::Vec3b>(y, imgXPos)[0];
+			}
+
+			padImg.at<cv::Vec3b>(y, x) = cv::Vec3b( static_cast<uint8_t>(sumB),
+													static_cast<uint8_t>(sumG),
+													static_cast<uint8_t>(sumR) );
+		}
+	}
+
+	int imgYPos{};
+	// convolve vertical kernel across image
+	for (int x = 1; x < padImg.cols; x++)
+	{
+		for (int y = 1; y < padImg.rows; y++)
+		{
+			float sumR{}, sumG{}, sumB{};
+
+			for (int k = 0; k < kernelSize; k++)
+			{
+				imgYPos = y + (k - pxlOffEntense);
+				if (imgYPos < 0 || imgYPos >= padImg.rows)
+					continue;
+
+				sumR += kernel.value()[k] * padImg.at<cv::Vec3b>(imgYPos, x)[2];
+				sumG += kernel.value()[k] * padImg.at<cv::Vec3b>(imgYPos, x)[1];
+				sumB += kernel.value()[k] * padImg.at<cv::Vec3b>(imgYPos, x)[0];
+			}
+
+			padImg.at<cv::Vec3b>(y, x) = cv::Vec3b( static_cast<uint8_t>(sumB),
+													static_cast<uint8_t>(sumG),
+													static_cast<uint8_t>(sumR) );
+		}
+	}
+
+	return padImg;
 }
 
-const Mat<float> 
-GuassianFilter::computeKernel(uint8_t kernelSize, float stdDev)
+const std::optional<GuassianFilter::Kernel>
+GuassianFilter::computeKernel(const uint8_t kernelSize, const float stdDev)
 {
+	// Naive Implementation:
+	// - Using a 2D Guassian Kernel
+	// Optimized Implementation:
+	// - Break 2D Kernel into 2 seperable 1-D identical kernels
+	
+	// pixel offset to kernel center
+	// 3x3 kernel:    -1 0 1
+	// 5x5 kernel: -2 -1 0 1 2
+	
 	// center pixel position for a nxn kernel
-	Point<int> pxlCenter{ (kernelSize - 1) / 2, (kernelSize - 1) / 2 };
+	uint8_t pxlOffExtense = (kernelSize - 1) / 2;
 
-	// find pixel offsets for other pixels from the center pixel
-	// i, j = kernel position
-	// x, y = pixel offset position
-	// x = i - centerX, y = j - centerY
 	// use offsets and stdDev to get kernel weights
-	Mat<float> kernel(kernelSize);
+	Kernel kernel(kernelSize);
 
-	Point<int> offset{};
-	float prefix{}, expTop{}, expBot{};
-	for (int j = 0; j < kernelSize; j++)
+	// compute kernel weight
+	float prefix = static_cast<float>( 1.f / std::sqrtf( (2.f * PI * std::powf(stdDev, 2.f)) ) );
+	float expBot = 2 * std::powf(stdDev, 2) * -1;
+	float expTop{};
+	for (int i = 0; i < kernelSize; i++)
 	{
-		for (int i = 0; i < kernelSize; i++)
-		{	
-			offset.x = i - pxlCenter.x;
-			offset.y = j - pxlCenter.y;
-			// kernel weight
-			prefix = 1 / ( 2 * PI * std::pow(stdDev, 2) );
-			expTop = std::pow(offset.x, 2) + std::pow(offset.y, 2);
-			expBot = 2 * std::pow(stdDev, 2) * -1;
-			kernel.data[j][i] = prefix * std::expf(expTop / expBot);
-		}
+		expTop = std::powf(i - pxlOffExtense, 2.f);
+		kernel[i] = prefix * std::expf(expTop / expBot);
 	}
 
 	// compute sum of kernel weights
 	float kernelWeightSum{};
-	for (const auto& row : kernel.data)
-	{
-		for (const float weight : row)
-			kernelWeightSum += weight;
-	}
+	for (const float weight : kernel)
+		kernelWeightSum += weight;
 
-	// normalize kernel
+	// normalize kernel: sum = 1
 	for (int j = 0; j < kernelSize; j++)
+		kernel[j] /= kernelWeightSum;
+
+	// sanity check
+	kernelWeightSum = 0;
+	for (const float weight : kernel)
+		kernelWeightSum += weight;
+
+	if (std::abs(kernelWeightSum - 1.f) > 1e-6f)
 	{
-		for (int i = 0; i < kernelSize; i++)
-			kernel.data[j][i] /= kernelWeightSum;
+		std::cout << "Kernel weights not correclty normalized";
+		return {};
+	}
+	return kernel;
+}
+
+const cv::Mat imgproc::adjustBrightness(const cv::Mat& img, uint8_t adjustBy,
+	Brightenss brightness)
+{
+	// darken = f - 128
+	// brighten = f + 128
+	// factor dictates by how much? 0.5 --> 128	
+	if (adjustBy == 0)
+		return img;
+
+	if (adjustBy > 255)
+		return cv::Mat();
+
+	float dynRangeMax = 255.0;
+	cv::Mat newImg(img.size(), img.type());
+
+	for (int y = 0; y < img.rows; y++)
+	{
+		for (int x = 0; x < img.cols; x++)
+		{
+			newImg.at<cv::Vec3b>(y, x) = 
+				brightness == Brightenss::DARKEN ?
+					img.at<cv::Vec3b>(y, x) - cv::Vec3b(adjustBy, adjustBy, adjustBy) :
+					img.at<cv::Vec3b>(y, x) + cv::Vec3b(adjustBy, adjustBy, adjustBy);
+		}
+	}
+	return newImg;
+}
+
+const cv::Mat imgproc::invert(const cv::Mat& img)
+{
+	// 255 - f
+	if (img.empty())
+		return cv::Mat();
+
+	cv::Mat invertedImg(img.size(), img.type());
+
+	for (int y = 0; y < img.rows; y++)
+	{
+		for (int x = 0; x < img.cols; x++)
+		{
+			invertedImg.at<cv::Vec3b>(y, x) = cv::Vec3b( 255 - img.at<cv::Vec3b>(y, x)[0],
+														 255 - img.at<cv::Vec3b>(y, x)[1],
+														 255 - img.at<cv::Vec3b>(y, x)[2] );
+		}
 	}
 
-	return kernel;
+	return invertedImg;
+}
+
+static const cv::Mat 
+imgproc::contrast(const cv::Mat& img, float factor, Contrast contrast)
+{
+	// f/2 = lower constrast; halving dynamic range
+	// f * 2 = higher contrast; doubling dynamic range (clipped to 255)
+
+	if (img.empty() || factor == 0.f)
+		return cv::Mat();
+
+	cv::Mat contrastImg(img.size(), img.type());
+
+	for (int y = 0; y < img.rows; y++)
+	{
+		for (int x = 0; x < img.cols; x++)
+		{
+			contrast == Contrast::LOW ?
+				contrastImg.at<cv::Vec3b>(y, x) = img.at<cv::Vec3b>(y, x) / factor : 
+				contrastImg.at<cv::Vec3b>(y, x) = img.at<cv::Vec3b>(y, x) * factor;
+			
+			contrastImg.at<cv::Vec3b>(y, x) = {
+				std::clamp(contrastImg.at<cv::Vec3b>(y, x)[0], (uint8_t)0, (uint8_t)255),
+				std::clamp(contrastImg.at<cv::Vec3b>(y, x)[1], (uint8_t)0, (uint8_t)255),
+				std::clamp(contrastImg.at<cv::Vec3b>(y, x)[2], (uint8_t)0, (uint8_t)255) };
+		}
+	}
+
+	return contrastImg;
+}
+
+
+static const cv::Mat 
+imgproc::toGrayscale(const cv::Mat& img)
+{
+	if (img.empty())
+		return cv::Mat();
+	
+	// gray = 0.3 * R + 0.6 * G + 0.1 * B
+	cv::Mat grayImg(img.size(), CV_8UC1);
+
+	for (int y = 0; y < img.rows; y++)
+	{
+		for (int x = 0; x < img.cols; x++)
+		{
+			grayImg.at<uint8_t>(y, x) = 
+			static_cast<uint8_t> (
+						img.at<cv::Vec3b>(y, x)[2] * 0.3 + 
+						img.at<cv::Vec3b>(y, x)[1] * 0.6 +
+						img.at<cv::Vec3b>(y, x)[0] * 0.1 );
+		}
+	}
+	return grayImg;
+}
+
+static const std::vector<cv::Mat> 
+imgproc::getGuassianPyramid(const cv::Mat& img)
+{
+	std::vector<cv::Mat> pyramid; // L1, L2...
+	constexpr uint8_t minSize = 32;
+
+	if (img.empty())
+		return pyramid;
+	
+	pyramid.push_back(img);
+
+	while (pyramid.back().rows > minSize || pyramid.back().cols > minSize)
+	{
+		// always process next level from previous finer level
+		cv::Mat currPyrLevel = pyramid.back();
+		cv::Mat currPyrLevelBlurred = GuassianFilter::applyGuassian(
+			currPyrLevel, 3, 1.6f).value();
+
+		cv::Mat nextPyrLevel(currPyrLevel.rows / 2, currPyrLevel.cols / 2, currPyrLevel.type());
+
+		//  Old   New
+		// (0,0)  (0,0)
+		// (0,2)  (0,1)
+		// (0,4)  (0,2)
+		// (2,0)  (1, 0)
+		for (int y = 0; y < currPyrLevelBlurred.rows - 1; y += 2)
+		{
+			for (int x = 0; x < currPyrLevelBlurred.cols - 1; x += 2)
+				nextPyrLevel.at<cv::Vec3b>(y / 2, x / 2) = currPyrLevelBlurred.at<cv::Vec3b>(y, x);
+		}
+		pyramid.push_back(nextPyrLevel);
+	}
+	return pyramid;
 
 }
 
 int main()
 {
-	std::string imgPath = "C:/CVFirstPrinciples/rgbImage.png";
+
+	std::string imgPath = "C:/Users/crastam/Downloads/OIP.jpg";
 	cv::Mat img = cv::imread(imgPath);
 
 	// rotation
-	//cv::Mat rotatedImgFwd = Rotation::rotate(img, 15, Rotation::rotateMethod::FWD_MAP);
-	cv::Mat rotatedImgInv = Rotation::rotate(img, 15, Rotation::rotateMethod::INV_MAP);
+	//cv::Mat rotatedImgInv = Rotation::rotate(img, 15, Rotation::rotateMethod::INV_MAP);
+    //cv::imshow("rotatedImgInv", rotatedImgInv);
 	
-	cv::Mat translatedImg = translate(rotatedImgInv, 100, 100);
+	// translation
+	//cv::Mat translatedImg = translate(rotatedImgInv, 100, 100);
+	//cv::imshow("translatedImg", translatedImg);
+	
+	// scale
 	//cv::Mat scaledImg = Scale::scale(img, Scale::InterpolationMethod::Bilinear, 2);
-	cv::Mat scaledImg1 = Scale::scale(translatedImg, Scale::InterpolationMethod::NearestNeighbour, 2);
+	//cv::Mat scaledImg1 = Scale::scale(translatedImg, Scale::InterpolationMethod::NearestNeighbour, 2);
+	//cv::imshow("scaledImg", scaledImg);
+	
+	// blur
+	//auto blurredImg3 = GuassianFilter::applyGuassian(img, 3, 1.6f);
+	//auto blurredImg5 = GuassianFilter::applyGuassian(img, 5, 1.6f);
+	//auto blurredImg7 = GuassianFilter::applyGuassian(img, 7, 1.6f);
+	//if (!blurredImg3.has_value() || !blurredImg5.has_value() || !blurredImg7.has_value())
+	//	return -1;
+	//cv::imshow("blurred3", blurredImg3.value());
+	//cv::imshow("blurred5", blurredImg5.value());
+	//cv::imshow("blurred7", blurredImg7.value());
+
+	//cv::Mat darkImg = adjustBrightness(img, 128, Brightenss::DARKEN);
+	//cv::Mat brightImg = adjustBrightness(img, 128, Brightenss::BRIGHTEN);
+	//cv::Mat invertedImg = invert(img);
+	//cv::Mat contrastLowImg = contrast(img, 2, Contrast::LOW);
+	//cv::Mat contrastHighImg = contrast(img, 2, Contrast::HIGH);
+	//cv::Mat grayImg = toGrayscale(img);
+	//
+	//cv::imshow("darkened", darkImg);
+	//cv::imshow("brightened", brightImg);
+	//cv::imshow("inverted", invertedImg);
+	//cv::imshow("contrast lowered", contrastLowImg);
+	//cv::imshow("contrast Higher", contrastHighImg);
+    //cv::imshow("grayscale", grayImg);
+
+	// TODO: image pyramids (Laplacian), non-linear filters, template matching
 
 	cv::imshow("original", img);
-	//cv::imshow("rotatedImgFwd", rotatedImgFwd);
-	//cv::imshow("rotatedImgInv", rotatedImgInv);
-	//cv::imshow("translatedImg", translatedImg);
-	//cv::imshow("scaledImg", scaledImg);
-	cv::imshow("scaledImg1", scaledImg1);
+	auto guassPyr = getGuassianPyramid(img);
+	for (int i = 0; i < 4; ++i)
+		cv::imshow("Level" + std::to_string(i), guassPyr[i]);
 
 	cv::waitKey();
 	cv::destroyAllWindows();
