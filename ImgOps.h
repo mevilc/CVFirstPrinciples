@@ -75,5 +75,7 @@ namespace imgproc
 	static const std::vector<cv::Mat>
 		getGuassianPyramid(const cv::Mat& img);
 
+	static const cv::Mat similarityTransform(cv::Mat& img);
+
 }
 

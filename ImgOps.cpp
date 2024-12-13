@@ -5,7 +5,7 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
-
+#include <filesystem>
 
 #include <opencv2/highgui.hpp>
 #include "ImgOps.h"
@@ -343,6 +343,16 @@ const cv::Mat Scale::scale(cv::Mat img, InterpolationMethod intMethod, uint8_t s
 	return scaledImg;
 }
 
+const cv::Mat imgproc::similarityTransform(cv::Mat& img)
+{
+	// scale, rotate, translate
+	cv::Mat scaledImg = Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 2);
+	cv::Mat rotatedImg = Rotation::rotate(scaledImg, 15, Rotation::rotateMethod::INV_MAP);
+	cv::Mat translatedImg = translate(rotatedImg, 100, 100);
+	return translatedImg;
+}
+
+
 const std::optional<cv::Mat>
 GuassianFilter::applyGuassian(const cv::Mat& img, const uint8_t kernelSize,
 	const float stdDev)
@@ -430,13 +440,13 @@ GuassianFilter::computeKernel(const uint8_t kernelSize, const float stdDev)
 	Kernel kernel(kernelSize);
 
 	// compute kernel weight
-	float prefix = static_cast<float>( 1.f / std::sqrtf( (2.f * PI * std::powf(stdDev, 2.f)) ) );
-	float expBot = 2 * std::powf(stdDev, 2) * -1;
+	float prefix = static_cast<float>( 1.f / sqrtf( (2.f * PI * powf(stdDev, 2.f)) ) );
+	float expBot = 2 * powf(stdDev, 2) * -1;
 	float expTop{};
 	for (int i = 0; i < kernelSize; i++)
 	{
-		expTop = std::powf(i - pxlOffExtense, 2.f);
-		kernel[i] = prefix * std::expf(expTop / expBot);
+		expTop = powf(i - pxlOffExtense, 2.f);
+		kernel[i] = prefix * expf(expTop / expBot);
 	}
 
 	// compute sum of kernel weights
@@ -602,7 +612,10 @@ imgproc::getGuassianPyramid(const cv::Mat& img)
 int main()
 {
 
-	std::string imgPath = "C:/Users/crastam/Downloads/OIP.jpg";
+	std::string imgPath = "/home/mevil/Downloads/hawk.png";
+	if (!std::filesystem::exists(imgPath))
+		return -1;
+
 	cv::Mat img = cv::imread(imgPath);
 
 	// rotation
@@ -618,6 +631,9 @@ int main()
 	//cv::Mat scaledImg1 = Scale::scale(translatedImg, Scale::InterpolationMethod::NearestNeighbour, 2);
 	//cv::imshow("scaledImg", scaledImg);
 	
+	//cv::Mat similarTransformImg = similarityTransform(img);
+	//cv::imshow("similarityTransform", similarTransformImg);
+
 	// blur
 	//auto blurredImg3 = GuassianFilter::applyGuassian(img, 3, 1.6f);
 	//auto blurredImg5 = GuassianFilter::applyGuassian(img, 5, 1.6f);
@@ -645,9 +661,9 @@ int main()
 	// TODO: image pyramids (Laplacian), non-linear filters, template matching
 
 	cv::imshow("original", img);
-	auto guassPyr = getGuassianPyramid(img);
-	for (int i = 0; i < 4; ++i)
-		cv::imshow("Level" + std::to_string(i), guassPyr[i]);
+	//auto guassPyr = getGuassianPyramid(img);
+	//for (int i = 0; i < 4; ++i)
+	//	cv::imshow("Level" + std::to_string(i), guassPyr[i]);
 
 	cv::waitKey();
 	cv::destroyAllWindows();
