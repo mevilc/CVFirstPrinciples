@@ -10,12 +10,9 @@ imgproc::similarityTransform(const Image &img)
     // scale, rotate, translate
     return translate(
             Rotation::rotate(
-                Scale::scale(img, Scale::InterpolationMethod::Bilinear, 2), 
+                Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 2), 
                 45, Rotation::rotateMethod::INV_MAP
                 ), 
                 100, 100
             );
-    
-    
-
 }

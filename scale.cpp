@@ -13,8 +13,9 @@ Image Scale::nearestNeighbour(const Image& img, const uint8_t scale)
 
 	for (int i = 0; i < sImg.rows * sImg.cols * 3; i += 3)
 	{
-		auto sImgPt = getPtFromIdx(i, sImg.cols);
-		// Find corresponding position in the original image (source pixel)
+		//auto sImgPt = getPtFromIdx(i, sImg.cols);
+		auto sImgPt = Point<int>((int)(i % sImg.cols), (int)(i / sImg.cols));
+        // Find corresponding position in the original image (source pixel)
 		int nearestOrigX = std::round(sImgPt.x / scale);
 		int nearestOrigY = std::round(sImgPt.y / scale);
 
@@ -42,8 +43,9 @@ Image Scale::bilinear(const Image& img, const uint8_t scale)
 
 	for (int i = 0; i < sImg.rows * sImg.cols * 3; i += 3)
 	{
-		auto sImgPt = getPtFromIdx(i, sImg.cols);
-		// Find corresponding position in the original image (source pixel)
+		//auto sImgPt = getPtFromIdx(i, sImg.cols);
+		auto sImgPt = Point<int>(i % sImg.cols, i / sImg.cols);
+        // Find corresponding position in the original image (source pixel)
 		float scaledToOrigX = sImgPt.x / (float)scale;
 		float scaledToOrigY = sImgPt.y / (float)scale;
 
@@ -97,7 +99,7 @@ Image Scale::scale(const Image& img,
 	if (scale == 0)
 		return img;
 
-	Image sImg;
+	Image sImg(img.rows, img.cols, img.channels);
 	if (intMethod == InterpolationMethod::NearestNeighbour)
 		sImg = nearestNeighbour(img, scale);
 	else if (intMethod == InterpolationMethod::Bilinear)

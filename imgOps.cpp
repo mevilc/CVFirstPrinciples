@@ -17,7 +17,7 @@ cv::Mat imgproc::imgToMat(Image &img)
 			img.pixels.data());
 }
 
-imgproc::Image imgproc::matToImg(cv::Mat mat)
+imgproc::Image imgproc::matToImg(const cv::Mat& mat)
 {
 	Image img;
 	img.rows = mat.rows;
@@ -28,31 +28,16 @@ imgproc::Image imgproc::matToImg(cv::Mat mat)
 	return img;
 }
 
-size_t imgproc::getIdxFromPt(const int x, const int y,
-	const int nCols, const int nChannels)
-{
-	return (y * nCols + x) * nChannels;
-}
-
-imgproc::Point<int>
-imgproc::getPtFromIdx(const size_t idx, const int nCols)
-{
-	return Point<int>(idx % nCols, idx / nCols);
-}
-
-
 imgproc::Pixel
 imgproc::Image::getPixel(int y, int x) const
 {
-	// int idx =  (x + cols * y) * 3;
-	int idx = getIdxFromPt(y, x, cols, channels);
+	int idx =  (x + cols * y) * channels;
 	Pixel pixel{};
 	if (channels == 3)
 	{
 		pixel.r = pixels.at(idx);
 		pixel.g = pixels.at(idx + 1);
 		pixel.b = pixels.at(idx + 2);
-		printf("breaks here");
 	}
 	else if (channels == 1)
 	{
@@ -63,9 +48,8 @@ imgproc::Image::getPixel(int y, int x) const
 
 void imgproc::Image::setPixel(int y, int x, const Pixel& pixel)
 {
-	// int idx =  (x + cols * y) * 3;
-	int idx = getIdxFromPt(y, x, cols, channels);
-	printf("idx %d from point (%d, %d)", idx, x, y);
+	int idx =  (x + cols * y) * channels;
+	
 	if (channels == 3)
 	{
 		pixels.at(idx) = pixel.r;

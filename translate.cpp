@@ -1,17 +1,18 @@
 #include "imgOps.h"
 #include "translate.h"
 
+#include <iostream>
+
 using namespace imgproc;
 
 Image imgproc::translate(const Image& img, int tx, int ty)
 {
+    // top-left origin
     // +tx = right
-    // +ty = up
+    // +ty = down 
 
     if (img.empty())
         return Image{};
-
-    ty *= -1;	// convert from regular cartesian to top-left-origin
 
     // determine new image size
     int newWidth = img.cols + std::abs(tx);
@@ -19,32 +20,25 @@ Image imgproc::translate(const Image& img, int tx, int ty)
 
     Image translatedImg(newHeight, newWidth, img.channels);
 
-    int xStart = tx < 0 ? 0 : translatedImg.cols - img.cols;
-    int yStart = ty < 0 ? 0 : translatedImg.rows - img.rows;
+    int cStart = tx < 0 ? 0 : translatedImg.cols - img.cols;
+    int rStart = ty < 0 ? 0 : translatedImg.rows - img.rows;
 
     /*
         original image:        translated image
-                               (2 right, 2 up):
-        X X                    Y Y X X
-        X X                    Y Y X X
-                               Y Y Y Y
+                               (2 right, 2 down):
+        X X                    Y Y Y Y 
+        X X                    Y Y Y Y
+                               Y Y X X
+                               Y Y X X
     */
-    auto imgIterStart = img.pixels.cbegin();
 
-    for (int colToReplace = 0; colToReplace < img.cols; colToReplace++)
+    for (int r = rStart; r < translatedImg.rows; r++)
     {
-        // access iterator of img vector
-        auto imgIterEnd = imgIterStart + (img.cols * 3);
-
-        // img: [rgb rgb rgb...]
-        // access img vector idx to insert: idx = (y * newImageCols + x) * 3
-        int idxToInsert = ( (yStart + colToReplace) * translatedImg.cols + xStart ) * 3;
-
-        translatedImg.pixels.insert(
-            translatedImg.pixels.begin() + idxToInsert,
-            imgIterStart, imgIterEnd);
-
-        imgIterStart = imgIterEnd;
+        for (int c = cStart; c < translatedImg.cols; c++)
+        {
+            translatedImg.setPixel(r, c, img.getPixel(r - rStart, c - cStart));
+        }
     }
+    
     return translatedImg;
 }

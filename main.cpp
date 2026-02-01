@@ -10,33 +10,52 @@
 
 #include <vector>
 #include <cmath>
+#include <iostream>
+
+using namespace imgproc;
+
+void rotate(const Image& img)
+{
+    Image rotatedImgFwd = Rotation::rotate(img, 45, Rotation::rotateMethod::FWD_MAP);
+	Image rotatedImgInv = Rotation::rotate(img, 45, Rotation::rotateMethod::INV_MAP);
+    cv::imshow("rotatedImgFwd", imgToMat(rotatedImgFwd));
+	cv::imshow("rotatedImgInv", imgToMat(rotatedImgInv));
+}
+
+
+void translate(const Image& img)
+{
+    Image translatedImg = translate(img, 50, 50);
+	cv::imshow("translatedImg", imgToMat(translatedImg));
+}
+
+void scale(const Image& img)
+{
+    Image scaledImg = Scale::scale(img, Scale::InterpolationMethod::Bilinear, 2);
+	Image scaledImg1 = Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 2);
+	cv::imshow("scaled -- NN", imgToMat(scaledImg1));
+	cv::imshow("scaled -- bilinear", imgToMat(scaledImg));
+}
+
+void simTransform(const Image& img)
+{
+	Image similarTransformImg = similarityTransform(img);
+	cv::imshow("similarityTransform", imgToMat(similarTransformImg));
+}
 
 int main()
 {
-	using namespace imgproc;
 
-	Image img = matToImg(cv::imread("/home/mevil/Documents/ImageProcessing/gaussian_noise.png"));
+	//Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/gaussian_noise.png"));
+	Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed.jpg"));
+	// Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed.jpg", cv::IMREAD_GRAYSCALE ));
+    
+    // rotate(img);
+    // translate(img);
+    // scale(img);
+    simTransform(img);
 
-	if (img.empty())
-		return -1;
-           
-	// rotation
-    Image rotatedImgFwd = Rotation::rotate(img, 45, Rotation::rotateMethod::FWD_MAP);
-	//Image rotatedImgInv = Rotation::rotate(img, 45, Rotation::rotateMethod::INV_MAP);
-    cv::imshow("rotatedImgFwd", imgToMat(rotatedImgFwd));
-	//cv::imshow("rotatedImgInv", imgToMat(rotatedImgInv));
-
-	// translation
-	// Image translatedImg = translate(img, 100, 100);
-	// cv::imshow("translatedImg", imgToMat(translatedImg));
-	
-	// scale
-	// Image scaledImg = Scale::scale(img, Scale::InterpolationMethod::Bilinear, 3);
-	// Image scaledImg1 = Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 3);
-	// cv::imshow("scaled -- NN", imgToMat(scaledImg1));
-	// cv::imshow("scaled -- bilinear", imgToMat(scaledImg));
-	
-	// Image similarTransformImg = similarityTransform(img);
+		// Image similarTransformImg = similarityTransform(img);
 	// cv::imshow("similarityTransform", imgToMat(similarTransformImg));
 
 	// blur
