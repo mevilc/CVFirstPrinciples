@@ -32,9 +32,10 @@ void translate(const Image& img)
 void scale(const Image& img)
 {
     Image scaledImg = Scale::scale(img, Scale::InterpolationMethod::Bilinear, 2);
-	Image scaledImg1 = Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 2);
-	cv::imshow("scaled -- NN", imgToMat(scaledImg1));
-	cv::imshow("scaled -- bilinear", imgToMat(scaledImg));
+	Image scaledImg2 = Scale::scale(img, Scale::InterpolationMethod::NearestNeighbour, 3);
+
+    cv::imshow("scaled - bilinear - 2", imgToMat(scaledImg));
+    cv::imshow("scaled -- NN - 3", imgToMat(scaledImg2));
 }
 
 void simTransform(const Image& img)
@@ -47,16 +48,14 @@ int main()
 {
 
 	//Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/gaussian_noise.png"));
-	Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed.jpg"));
-	// Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed.jpg", cv::IMREAD_GRAYSCALE ));
-    
+	Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed_36.jpg"));
+    // Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed.jpg", cv::IMREAD_GRAYSCALE ));
+
     // rotate(img);
     // translate(img);
     // scale(img);
     simTransform(img);
 
-		// Image similarTransformImg = similarityTransform(img);
-	// cv::imshow("similarityTransform", imgToMat(similarTransformImg));
 
 	// blur
 	//auto blurredImg3 = applyGuassian(img, 3, 3.f);

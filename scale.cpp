@@ -11,16 +11,15 @@ Image Scale::nearestNeighbour(const Image& img, const uint8_t scale)
 	// round to nearest integer position.
 	Image sImg(img.rows * scale, img.cols * scale, img.channels);
 
-	for (int i = 0; i < sImg.rows * sImg.cols * 3; i += 3)
+	for (int i = 0; i < sImg.rows * sImg.cols * sImg.channels; i += sImg.channels)
 	{
-		//auto sImgPt = getPtFromIdx(i, sImg.cols);
-		auto sImgPt = Point<int>((int)(i % sImg.cols), (int)(i / sImg.cols));
+		auto sImgPt = Point<int>((i % sImg.cols), (i / sImg.cols));
         // Find corresponding position in the original image (source pixel)
 		int nearestOrigX = std::round(sImgPt.x / scale);
 		int nearestOrigY = std::round(sImgPt.y / scale);
 
 		// Ensure within bounds
-		if (nearestOrigX >= img.cols || nearestOrigY >= img.rows)
+		if (nearestOrigX < 0 || nearestOrigX >= img.cols || nearestOrigY < 0 || nearestOrigY >= img.rows)
 			continue;
 
 		// Copy pixel data from original image to scaled image
@@ -41,16 +40,15 @@ Image Scale::bilinear(const Image& img, const uint8_t scale)
 
 	Image sImg(img.rows * scale, img.cols * scale, img.channels);
 
-	for (int i = 0; i < sImg.rows * sImg.cols * 3; i += 3)
+	for (int i = 0; i < sImg.rows * sImg.cols * sImg.channels; i += sImg.channels)
 	{
-		//auto sImgPt = getPtFromIdx(i, sImg.cols);
 		auto sImgPt = Point<int>(i % sImg.cols, i / sImg.cols);
         // Find corresponding position in the original image (source pixel)
 		float scaledToOrigX = sImgPt.x / (float)scale;
 		float scaledToOrigY = sImgPt.y / (float)scale;
 
 		// Ensure within bounds
-		if (scaledToOrigX >= img.cols || scaledToOrigY >= img.rows)
+        if (scaledToOrigX < 0 || scaledToOrigX >= img.cols || scaledToOrigY < 0 || scaledToOrigY >= img.rows)
 			continue;
 		
 		// neighbours
@@ -65,8 +63,8 @@ Image Scale::bilinear(const Image& img, const uint8_t scale)
 		
 		Point<int> ll(ul.x, lr.y);
 
-		float a = std::abs( lr.x - scaledToOrigX );
-		float b = std::abs( lr.y - scaledToOrigY );
+		float a = std::fabs( lr.x - scaledToOrigX );
+		float b = std::fabs( lr.y - scaledToOrigY );
 		
 		// pixel = (1 - a)(1 - b)P00 + a(1 - b)P10 + (1 - a)bP01 + abP1
 	
