@@ -3,3 +3,4 @@ build/
 gaussian_noise.png
 salt_and_pepper_noise.png
 boat-compressed_36.jpg
+.vscode/

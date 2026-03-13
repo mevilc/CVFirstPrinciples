@@ -6,7 +6,7 @@
 
 // Pixels are stored in a single contigous buffer.  If color, they are interleaved BGR (from openCV).
 // Origin top-left == same as OpenCV
-
+	
 namespace imgproc
 {
 	template <typename T>

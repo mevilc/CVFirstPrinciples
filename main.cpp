@@ -11,6 +11,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <string>
 
 using namespace imgproc;
 
@@ -44,34 +45,42 @@ void simTransform(const Image& img)
 	cv::imshow("similarityTransform", imgToMat(similarTransformImg));
 }
 
+void blur(const Image& img)
+{
+	auto blurredImg3 = applyGuassian(img, 3, 3.f);
+	auto blurredImg5 = applyGuassian(img, 5, 5.f);
+	auto blurredImg7 = applyGuassian(img, 7, 10.f);
+    cv::imshow("blurred3", imgToMat(blurredImg3));
+	cv::imshow("blurred5", imgToMat(blurredImg5));
+	cv::imshow("blurred7", imgToMat(blurredImg7));
+}
+
+void getPyramid(const Image& img)
+{
+	std::vector<Image> pyramid = getGuassianPyramid(img);
+	
+ 	for (size_t i = 0; i < pyramid.size(); i++)
+ 		cv::imshow("level " + std::to_string(i + 1), imgToMat(pyramid[i]));
+
+}
+
 int main()
 {
-
+    
+    // img with guassian noise
 	//Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/gaussian_noise.png"));
-	Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed_36.jpg"));
+    
+    Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed_36.jpg"));
     // Image img = matToImg(cv::imread("/Users/mevilcrasta/Documents/CVFirstPrinciples/boat-compressed.jpg", cv::IMREAD_GRAYSCALE ));
 
     // rotate(img);
     // translate(img);
     // scale(img);
-    simTransform(img);
+    // simTransform(img);
+    // blur(img);
+    getPyramid(img);
 
-
-	// blur
-	//auto blurredImg3 = applyGuassian(img, 3, 3.f);
-	//auto blurredImg5 = applyGuassian(img, 5, 5.f);
-	//auto blurredImg7 = applyGuassian(img, 7, 10.f);
-	
-	//cv::imshow("blurred3", imgToMat(blurredImg3));
-	//cv::imshow("blurred5", imgToMat(blurredImg5));
-	//cv::imshow("blurred7", imgToMat(blurredImg7));
-
-	//std::vector<Image> pyramid = getGuassianPyramid(img);
-	//
-	//for (int i = 0; i < pyramid.size(); i++)
-	//	cv::imshow("level " + std::to_string(i + 1), imgToMat(pyramid[i]));
-
-	//Image darkImg = adjustBrightness(img, -100);
+		//Image darkImg = adjustBrightness(img, -100);
 	//Image brightImg = adjustBrightness(img, 100);
 	//Image invertedImg = invert(img);
 	//Image contrastLowImg = contrast(img, 0.5);
